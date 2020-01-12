@@ -178,8 +178,8 @@ if __name__ == "__main__":
     # print("dataset first element:")
     # print(dataset[0])
 
-    epochs = 250
-    dataset_generator = repeat(thing for thing in dataset)
+    epochs = 1
+    dataset_generator = (thing for thing in dataset)
 
     lstm_model.compile(Adam(), loss='mse')
     lstm_model.fit(dataset_generator, epochs=epochs)
