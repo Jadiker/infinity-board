@@ -167,6 +167,8 @@ if __name__ == "__main__":
     print("Examples:")
     print(examples)
 
+    good_bad_vectors = [vectorize([1, 0]), vectorize([0, 1])]
+
     dataset = []
     for good_bad_index in range(2):
         for example in examples[good_bad_index]:
