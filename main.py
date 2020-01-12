@@ -1,7 +1,7 @@
 import tensorflow as tf
 from typing import Iterable, List, Set, Callable
 from pynput.keyboard import Listener
-from itertools import repeat
+from itertools import cycle
 
 Key = str
 Keys = Iterable[Key]
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     # print(dataset[0])
 
     epochs = 1
-    dataset_generator = (thing for thing in dataset)
+    dataset_generator = (thing for thing in cycle(dataset))
 
     lstm_model.compile(Adam(), loss='mse')
     lstm_model.fit(dataset_generator, epochs=epochs)
