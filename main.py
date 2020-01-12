@@ -1,6 +1,7 @@
 import tensorflow as tf
 from typing import Iterable, List, Set, Callable
 from pynput.keyboard import Listener
+from itertools import repeat
 
 Key = str
 Keys = Iterable[Key]
@@ -172,9 +173,13 @@ if __name__ == "__main__":
     dataset = []
     for good_bad_index in range(2):
         for example in examples[good_bad_index]:
-            dataset.append((example_to_vector(example), good_bad_vectors[good_bad_index]))
+            dataset.append((vectorize([example_to_vector(example)]), vectorize([good_bad_vectors[good_bad_index]])))
 
-    dataset_generator = (thing for thing in dataset)
+    # print("dataset first element:")
+    # print(dataset[0])
+
+    epochs = 250
+    dataset_generator = repeat(thing for thing in dataset)
 
     lstm_model.compile(Adam(), loss='mse')
-    lstm_model.fit(dataset_generator, epochs=250)
+    lstm_model.fit(dataset_generator, epochs=epochs)
