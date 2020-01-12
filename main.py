@@ -120,7 +120,7 @@ if __name__ == "__main__":
     from tensorflow.keras.models import Model
     from tensorflow.keras.optimizers import Adam
 
-    keys_that_matter: Keys = "tyufghjvbn"
+    keys_that_matter: Keys = KeyTracker.default_valid_keys
     # if the user lifts all their fingers from the keyboard, how many seconds we should wait before assuming the stroke is over
     lift_pause = 1
     keys_that_matter_dictionary = keys_to_key_dictionary(keys_that_matter)
@@ -128,10 +128,8 @@ if __name__ == "__main__":
     key_tracker = KeyTracker(valid_keys=keys_that_matter)
     easy_get_drawing = lambda: get_drawing(key_tracker, lift_pause)
 
-    number_of_good_examples = 1
-    number_of_bad_examples = 1
-
-
+    number_of_good_examples = 5
+    number_of_bad_examples = 5
 
     lstm_input = Input(shape=(None, len(keys_that_matter)))
     lstm_layer1 = LSTM(20)(lstm_input)
