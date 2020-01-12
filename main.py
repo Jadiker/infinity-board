@@ -1,10 +1,11 @@
 import tensorflow as tf
-from typing import Iterable, List, Set, Callable
+from typing import Iterable, List, Set, Dict
 from pynput.keyboard import Listener
 from itertools import cycle
 
 Key = str
 Keys = Iterable[Key]
+KeyDictionary = Dict[Key, int]
 KeysDown = Set[Key]
 Drawing = List[KeysDown]
 
@@ -55,45 +56,27 @@ def batchify(vector):
     '''Make a batch out of a single example'''
     return vectorize([vector])
 
-def get_example_to_vector(key_list: Iterable[Key]):
-    key_dictionary = {key: key_index for key_index, key in enumerate(key_list)}
-    def example_to_vector(keys_pressed_sequence: List[KeysDown]):
-        vector_length = len(key_dictionary)
-        ans = []
-        for keys_pressed in keys_pressed_sequence:
-            vector = [0] * vector_length
-            for key in keys_pressed:
-                try:
-                    vector_index = key_dictionary[key]
-                except KeyError as e:
-                    raise ValueError(f"Key {repr(key)} could not be found in the key dictionary: {key_dictionary}")
-                vector[vector_index] = 1
+def keys_to_key_dictionary(keys: Keys):
+    return {key: key_index for key_index, key in enumerate(keys)}
 
-            vector = vectorize(vector)
-            ans.append(vector)
-        return vectorize(ans)
-    return example_to_vector
+def drawing_to_vector(drawing: Drawing, key_dictionary: KeyDictionary):
+    vector_length = len(key_dictionary)
+    ans = []
+    for keys_pressed in drawing:
+        vector = [0] * vector_length
+        for key in keys_pressed:
+            try:
+                vector_index = key_dictionary[key]
+            except KeyError as e:
+                raise ValueError(f"Key {repr(key)} could not be found in the key dictionary: {key_dictionary}")
+            vector[vector_index] = 1
+
+        vector = vectorize(vector)
+        ans.append(vector)
+    return vectorize(ans)
 
 
-#
-# def on_press(key):
-#     print('{0} pressed'.format(
-#         key))
-#
-# def on_release(key):
-#     print('{0} release'.format(
-#         key))
-#     if key == Key.esc:
-#         # Stop listener
-#         return False
-#
-# # Collect events until released
-# with Listener(
-#         on_press=on_press,
-#         on_release=on_release) as listener:
-#     listener.join()
-
-def get_drawing(key_tracker: KeyTracker) -> Drawing:
+def get_drawing(key_tracker: KeyTracker, pause_time: float) -> Drawing:
     key_tracker.clear()
     next_history_index = 0
     started = False
@@ -114,7 +97,7 @@ def get_drawing(key_tracker: KeyTracker) -> Drawing:
                 next_history_index += 1
                 if not keys_pressed:
                     # TODO change this so that it's just checking while the wait period is occurring
-                    sleep(lift_pause)
+                    sleep(pause_time)
                     if not key_tracker.history[next_history_index:]:
                         # they did not press a key in the given time
                         done = True
@@ -138,49 +121,56 @@ if __name__ == "__main__":
     from tensorflow.keras.optimizers import Adam
 
     keys_that_matter: Keys = "tyufghjvbn"
-    example_to_vector = get_example_to_vector(keys_that_matter)
-    # print(example_to_vector(set(["t", "u"])))
-
+    # if the user lifts all their fingers from the keyboard, how many seconds we should wait before assuming the stroke is over
+    lift_pause = 1
+    keys_that_matter_dictionary = keys_to_key_dictionary(keys_that_matter)
+    easy_drawing_to_vector = lambda drawing: drawing_to_vector(drawing, keys_that_matter_dictionary)
     key_tracker = KeyTracker(valid_keys=keys_that_matter)
+    easy_get_drawing = lambda: get_drawing(key_tracker, lift_pause)
 
     number_of_good_examples = 1
     number_of_bad_examples = 1
+
+
 
     lstm_input = Input(shape=(None, len(keys_that_matter)))
     lstm_layer1 = LSTM(20)(lstm_input)
     lstm_output = Dense(2)(lstm_layer1)
     lstm_model = Model(inputs=lstm_input, outputs=lstm_output)
 
-    # if the user lifts all their fingers from the keyboard, how many seconds we should wait before assuming the stroke is over
-    lift_pause = 1
-
     numbers_of_examples = [number_of_good_examples, number_of_bad_examples]
     good_bad_words = ["good", "bad"]
-    examples = [[], []]
+    drawings = [[], []]
 
     for good_bad_index in range(2):
         for good_example_index in range(number_of_good_examples):
             print(f"Please do a {good_bad_words[good_bad_index]} example:")
-            example = get_drawing(key_tracker)
-            examples[good_bad_index].append(example)
+            drawing = easy_get_drawing()
+            drawings[good_bad_index].append(drawing)
             print(key_tracker.history)
 
-    print("Examples:")
-    print(examples)
 
     good_bad_vectors = [vectorize([1, 0]), vectorize([0, 1])]
 
     dataset = []
     for good_bad_index in range(2):
-        for example in examples[good_bad_index]:
-            dataset.append((vectorize([example_to_vector(example)]), vectorize([good_bad_vectors[good_bad_index]])))
+        for drawing in drawings[good_bad_index]:
+            drawing_vector = easy_drawing_to_vector(drawing)
+            good_bad_vector = good_bad_vectors[good_bad_index]
+            dataset_example = (batchify(drawing_vector), batchify(good_bad_vector))
+            dataset.append(dataset_example)
 
-    # print("dataset first element:")
-    # print(dataset[0])
-
-    epochs = 5
+    epochs = 250
     steps_per_epoch = len(dataset)
     dataset_generator = (thing for thing in cycle(dataset))
 
     lstm_model.compile(Adam(), loss='mse')
     lstm_model.fit(dataset_generator, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
+    while True:
+        print("Do something")
+        drawing = easy_get_drawing()
+        input_vector = easy_drawing_to_vector(drawing)
+        batch = batchify(input_vector)
+        network_output = lstm_model.predict(batch)
+        print(network_output)
