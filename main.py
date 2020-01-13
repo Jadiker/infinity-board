@@ -1,3 +1,6 @@
+import os
+# silence tensorflow warnings and info
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 import tensorflow as tf
 from typing import Iterable, List, Set, Dict
 from pynput.keyboard import Listener
@@ -166,9 +169,11 @@ if __name__ == "__main__":
     lstm_model.fit(dataset_generator, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
     while True:
-        print("Do something")
+        print("Do something:")
         drawing = easy_get_drawing()
         input_vector = easy_drawing_to_vector(drawing)
         batch = batchify(input_vector)
         network_output = lstm_model.predict(batch)
+        # The first number should be bigger than the second if it's the "good" drawing
+        # The second number should be bigger than the first if it's the "bad" drawing
         print(network_output)
