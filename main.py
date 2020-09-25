@@ -177,3 +177,4 @@ if __name__ == "__main__":
         # The first number should be bigger than the second if it's the "good" drawing
         # The second number should be bigger than the first if it's the "bad" drawing
         print(network_output)
+        print("Detected Good" if network_output[0][0] > network_output[0][1] else "Detected Bad")
